@@ -23,15 +23,14 @@ from app.config import Config
 
 
 def main():
-    """主函数"""
-    # 验证配置
+    """Main entry point"""
+    # Validate config — warn but don't exit; key can be saved via /api/setup/key
     errors = Config.validate()
     if errors:
-        print("配置错误:")
+        print("Configuration warnings (can be resolved via API):")
         for err in errors:
             print(f"  - {err}")
-        print("\n请检查 .env 文件中的配置")
-        sys.exit(1)
+        print()  # blank line, then continue
     
     # 创建应用
     app = create_app()
