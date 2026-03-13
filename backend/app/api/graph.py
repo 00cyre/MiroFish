@@ -163,48 +163,57 @@ def generate_ontology():
                 "error": "Please provide a simulation requirement description (simulation_requirement)"
             }), 400
         
-        # Get uploaded files
+        # Accept either uploaded files OR a plain-text prompt (prompt_text field)
+        prompt_text = request.form.get('prompt_text', '').strip()
         uploaded_files = request.files.getlist('files')
-        if not uploaded_files or all(not f.filename for f in uploaded_files):
+        has_files = uploaded_files and any(f.filename for f in uploaded_files)
+
+        if not has_files and not prompt_text:
             return jsonify({
                 "success": False,
-                "error": "Please upload at least one document file"
+                "error": "Provide either uploaded files or a prompt_text description of the scenario"
             }), 400
-        
+
         # Create project
         project = ProjectManager.create_project(name=project_name)
         project.simulation_requirement = simulation_requirement
         logger.info(f"Created project: {project.project_id}")
-        
-        # Save files and extract text
+
+        # Build seed text from files or prompt
         document_texts = []
         all_text = ""
-        
-        for file in uploaded_files:
-            if file and file.filename and allowed_file(file.filename):
-                # Save file to project directory
-                file_info = ProjectManager.save_file_to_project(
-                    project.project_id, 
-                    file, 
-                    file.filename
-                )
-                project.files.append({
-                    "filename": file_info["original_filename"],
-                    "size": file_info["size"]
-                })
-                
-                # Extract text
-                text = FileParser.extract_text(file_info["path"])
-                text = TextProcessor.preprocess_text(text)
-                document_texts.append(text)
-                all_text += f"\n\n=== {file_info['original_filename']} ===\n{text}"
-        
-        if not document_texts:
-            ProjectManager.delete_project(project.project_id)
-            return jsonify({
-                "success": False,
-                "error": "No documents were successfully processed, please check the file format"
-            }), 400
+
+        if has_files:
+            for file in uploaded_files:
+                if file and file.filename and allowed_file(file.filename):
+                    file_info = ProjectManager.save_file_to_project(
+                        project.project_id,
+                        file,
+                        file.filename
+                    )
+                    project.files.append({
+                        "filename": file_info["original_filename"],
+                        "size": file_info["size"]
+                    })
+                    text = FileParser.extract_text(file_info["path"])
+                    text = TextProcessor.preprocess_text(text)
+                    document_texts.append(text)
+                    all_text += f"\n\n=== {file_info['original_filename']} ===\n{text}"
+
+            if not document_texts:
+                ProjectManager.delete_project(project.project_id)
+                return jsonify({
+                    "success": False,
+                    "error": "No documents were successfully processed, please check the file format"
+                }), 400
+        else:
+            # Prompt-only mode: use the text directly as seed content
+            logger.info("Prompt-only mode: using prompt_text as seed content")
+            seed = f"Scenario Description:\n{prompt_text}\n\nSimulation Requirement:\n{simulation_requirement}"
+            if additional_context:
+                seed += f"\n\nAdditional Context:\n{additional_context}"
+            document_texts = [seed]
+            all_text = seed
         
         # Save extracted text
         project.total_text_length = len(all_text)

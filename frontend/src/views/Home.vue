@@ -125,10 +125,22 @@
             <div class="console-section">
               <div class="console-header">
                 <span class="console-label">01 / Real-World Seeds</span>
-                <span class="console-meta">Supported formats: PDF, MD, TXT</span>
+                <span class="console-meta">
+                  <button
+                    class="mode-toggle"
+                    :class="{ active: !promptOnly }"
+                    @click.prevent="promptOnly = false"
+                  >📄 Files</button>
+                  <button
+                    class="mode-toggle"
+                    :class="{ active: promptOnly }"
+                    @click.prevent="promptOnly = true"
+                  >✏️ Prompt</button>
+                </span>
               </div>
-              
-              <div 
+
+              <!-- File upload mode -->
+              <div v-if="!promptOnly"
                 class="upload-zone"
                 :class="{ 'drag-over': isDragOver, 'has-files': files.length > 0 }"
                 @dragover.prevent="handleDragOver"
@@ -145,13 +157,11 @@
                   style="display: none"
                   :disabled="loading"
                 />
-                
                 <div v-if="files.length === 0" class="upload-placeholder">
                   <div class="upload-icon">↑</div>
                   <div class="upload-title">Drag & drop files to upload</div>
                   <div class="upload-hint">or click to browse your file system</div>
                 </div>
-                
                 <div v-else class="file-list">
                   <div v-for="(file, index) in files" :key="index" class="file-item">
                     <span class="file-icon">📄</span>
@@ -159,6 +169,17 @@
                     <button @click.stop="removeFile(index)" class="remove-btn">×</button>
                   </div>
                 </div>
+              </div>
+
+              <!-- Prompt-only mode -->
+              <div v-else class="prompt-seed-wrapper">
+                <textarea
+                  v-model="promptText"
+                  class="prompt-seed-input"
+                  placeholder="Describe the world you want to simulate...&#10;&#10;e.g. 'Developer communities on Hacker News, Reddit r/ClaudeAI, and Anthropic Discord. Each community has distinct technical preferences and adoption patterns. We are launching a new open-source CLI tool called claudetree.'"
+                  :disabled="loading"
+                  rows="7"
+                ></textarea>
               </div>
             </div>
 
@@ -229,9 +250,15 @@ const isDragOver = ref(false)
 // File input reference
 const fileInput = ref(null)
 
+// Prompt-only mode toggle
+const promptOnly = ref(false)
+const promptText = ref('')
+
 // Computed: whether form can be submitted
 const canSubmit = computed(() => {
-  return formData.value.simulationRequirement.trim() !== '' && files.value.length > 0
+  if (!formData.value.simulationRequirement.trim()) return false
+  if (promptOnly.value) return promptText.value.trim().length > 0
+  return files.value.length > 0
 })
 
 // Trigger file selection
@@ -292,15 +319,13 @@ const scrollToBottom = () => {
 const startSimulation = () => {
   if (!canSubmit.value || loading.value) return
   
-  // Store data pending upload
   import('../store/pendingUpload.js').then(({ setPendingUpload }) => {
-    setPendingUpload(files.value, formData.value.simulationRequirement)
-    
-    // Navigate immediately to Process page (using special identifier for new project)
-    router.push({
-      name: 'Process',
-      params: { projectId: 'new' }
-    })
+    setPendingUpload(
+      promptOnly.value ? [] : files.value,
+      formData.value.simulationRequirement,
+      promptOnly.value ? promptText.value : ''
+    )
+    router.push({ name: 'Process', params: { projectId: 'new' } })
   })
 }
 </script>
@@ -687,6 +712,44 @@ const startSimulation = () => {
   color: #666;
 }
 
+.mode-toggle {
+  background: transparent;
+  border: 1px solid #333;
+  color: #666;
+  padding: 2px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  margin-left: 6px;
+  transition: all 0.2s;
+}
+.mode-toggle.active {
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.prompt-seed-wrapper {
+  margin-top: 8px;
+}
+.prompt-seed-input {
+  width: 100%;
+  background: #0a0a0a;
+  border: 1px solid #222;
+  border-radius: 6px;
+  color: #ccc;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 12px;
+  resize: vertical;
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+.prompt-seed-input:focus {
+  outline: none;
+  border-color: #333;
+}
+.prompt-seed-input::placeholder {
+  color: #444;
+}
 .upload-zone {
   border: 1px dashed #CCC;
   height: 200px;

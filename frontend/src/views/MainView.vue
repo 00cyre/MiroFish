@@ -188,9 +188,11 @@ const initProject = async () => {
 
 const handleNewProject = async () => {
   const pending = getPendingUpload()
-  if (!pending.isPending || pending.files.length === 0) {
-    error.value = 'No pending files found.'
-    addLog('Error: No pending files found for new project.')
+  const hasFiles = pending.files && pending.files.length > 0
+  const hasPrompt = pending.promptText && pending.promptText.trim().length > 0
+  if (!pending.isPending || (!hasFiles && !hasPrompt)) {
+    error.value = 'No input found. Please provide files or a prompt.'
+    addLog('Error: No files or prompt found for new project.')
     return
   }
   
@@ -201,7 +203,12 @@ const handleNewProject = async () => {
     addLog('Starting ontology generation: Uploading files...')
     
     const formData = new FormData()
-    pending.files.forEach(f => formData.append('files', f))
+    if (hasFiles) {
+      pending.files.forEach(f => formData.append('files', f))
+    }
+    if (hasPrompt) {
+      formData.append('prompt_text', pending.promptText)
+    }
     formData.append('simulation_requirement', pending.simulationRequirement)
     
     const res = await generateOntology(formData)
