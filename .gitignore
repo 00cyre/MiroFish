@@ -5,6 +5,9 @@ Thumbs.db
 # Environment variables (protect sensitive info)
 .env
 .env.local
+# Local MiroFish config (contains API keys — never commit)
+.mirofish/
+**/config.json
 .env.*.local
 .env.development
 .env.test
