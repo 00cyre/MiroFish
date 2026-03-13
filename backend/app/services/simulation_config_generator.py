@@ -440,7 +440,6 @@ class SimulationConfigGenerator:
                     ],
                     temperature=0.7 - (attempt * 0.1),
                 )
-                finish_reason = 'stop'
 
                 # Try to parse JSON
                 try:

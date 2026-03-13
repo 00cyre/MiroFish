@@ -1009,28 +1009,47 @@ def create_model(config: Dict[str, Any], use_boost: bool = False):
         llm_model = boost_model or os.environ.get("LLM_MODEL_NAME", "")
         config_label = "[Boost LLM]"
     else:
-        # Use general configuration
+        # Use general configuration — prefer ANTHROPIC_KEY (OAuth or API key)
         llm_api_key = os.environ.get("LLM_API_KEY", "")
         llm_base_url = os.environ.get("LLM_BASE_URL", "")
         llm_model = os.environ.get("LLM_MODEL_NAME", "")
         config_label = "[General LLM]"
-    
+
     # If no model name in .env, use config as fallback
     if not llm_model:
-        llm_model = config.get("llm_model", "gpt-4o-mini")
-    
-    # Set environment variables required by camel-ai
+        llm_model = config.get("llm_model", "claude-sonnet-4-5")
+
+    # --- Anthropic OAuth / API key support ---
+    # Read from ANTHROPIC_KEY env var or ~/.mirofish/config.json
+    anthropic_key = os.environ.get("ANTHROPIC_KEY", "")
+    if not anthropic_key:
+        try:
+            import json, pathlib
+            cfg = json.loads((pathlib.Path.home() / ".mirofish" / "config.json").read_text())
+            anthropic_key = cfg.get("anthropicKey", "")
+        except Exception:
+            pass
+
+    if anthropic_key:
+        is_oauth = anthropic_key.startswith("sk-ant-oat")
+        os.environ["ANTHROPIC_API_KEY"] = anthropic_key
+        # Normalize model name (strip anthropic/ prefix if present)
+        model_name = llm_model.replace("anthropic/", "") or "claude-sonnet-4-5"
+        print(f"{config_label} platform=Anthropic {'(OAuth)' if is_oauth else '(API key)'}, model={model_name}...")
+        return ModelFactory.create(
+            model_platform=ModelPlatformType.ANTHROPIC,
+            model_type=model_name,
+            model_config_dict={"max_tokens": 8192},
+        )
+
+    # --- Fallback: OpenAI-compatible ---
     if llm_api_key:
         os.environ["OPENAI_API_KEY"] = llm_api_key
-    
     if not os.environ.get("OPENAI_API_KEY"):
-        raise ValueError("Missing API Key configuration. Please set LLM_API_KEY in the project root .env file")
-    
+        raise ValueError("No API key found. Set ANTHROPIC_KEY in env or ~/.mirofish/config.json, or set LLM_API_KEY for OpenAI-compatible providers.")
     if llm_base_url:
         os.environ["OPENAI_API_BASE_URL"] = llm_base_url
-    
-    print(f"{config_label} model={llm_model}, base_url={llm_base_url[:40] if llm_base_url else 'default'}...")
-    
+    print(f"{config_label} platform=OpenAI-compatible, model={llm_model}, base_url={llm_base_url[:40] if llm_base_url else 'default'}...")
     return ModelFactory.create(
         model_platform=ModelPlatformType.OPENAI,
         model_type=llm_model,

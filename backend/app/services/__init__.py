@@ -3,7 +3,7 @@ Business service module
 """
 
 from .ontology_generator import OntologyGenerator
-from .graph_builder import GraphBuilderService
+from .graph_builder_pg import GraphBuilderService
 from .text_processor import TextProcessor
 from .pg_entity_reader import ZepEntityReader, EntityNode, FilteredEntities
 from .oasis_profile_generator import OasisProfileGenerator, OasisAgentProfile
