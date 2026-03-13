@@ -71,7 +71,6 @@ class Config:
         errors = []
         if not load_anthropic_key():
             errors.append("Anthropic key not configured. Set ANTHROPIC_KEY or save via /api/setup/key")
-        if not cls.ZEP_API_KEY:
-            errors.append("ZEP_API_KEY is not configured")
+        # ZEP_API_KEY removed — using Postgres graph store instead
         return errors
 

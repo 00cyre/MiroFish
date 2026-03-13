@@ -222,12 +222,15 @@ def generate_ontology():
         
         # Generate ontology
         logger.info("Calling LLM to generate ontology definition...")
-        generator = OntologyGenerator()
-        ontology = generator.generate(
-            document_texts=document_texts,
-            simulation_requirement=simulation_requirement,
-            additional_context=additional_context if additional_context else None
-        )
+        try:
+            generator = OntologyGenerator()
+            ontology = generator.generate(
+                document_texts=document_texts,
+                simulation_requirement=simulation_requirement,
+                additional_context=additional_context if additional_context else None
+            )
+        except ValueError as e:
+            return jsonify({"success": False, "error": "setup_required", "message": str(e)}), 400
         
         # Save ontology to project
         entity_count = len(ontology.get("entity_types", []))
@@ -291,16 +294,7 @@ def build_graph():
     try:
         logger.info("=== Starting graph building ===")
         
-        # Check configuration
-        errors = []
-        if not Config.ZEP_API_KEY:
-            errors.append("ZEP_API_KEY is not configured")
-        if errors:
-            logger.error(f"Configuration error: {errors}")
-            return jsonify({
-                "success": False,
-                "error": "Configuration error: " + "; ".join(errors)
-            }), 500
+        # Configuration check — Postgres-based, no ZEP_API_KEY needed
         
         # Parse request
         data = request.get_json() or {}
@@ -391,7 +385,7 @@ def build_graph():
                 )
                 
                 # Create graph building service
-                builder = GraphBuilderService(api_key=Config.ZEP_API_KEY)
+                builder = GraphBuilderService()
                 
                 # Chunking
                 task_manager.update_task(
@@ -576,13 +570,7 @@ def get_graph_data(graph_id: str):
     Get graph data (nodes and edges)
     """
     try:
-        if not Config.ZEP_API_KEY:
-            return jsonify({
-                "success": False,
-                "error": "ZEP_API_KEY is not configured"
-            }), 500
-
-        builder = GraphBuilderService(api_key=Config.ZEP_API_KEY)
+        builder = GraphBuilderService()
         graph_data = builder.get_graph_data(graph_id)
         
         return jsonify({
@@ -604,13 +592,7 @@ def delete_graph(graph_id: str):
     Delete a Zep graph
     """
     try:
-        if not Config.ZEP_API_KEY:
-            return jsonify({
-                "success": False,
-                "error": "ZEP_API_KEY is not configured"
-            }), 500
-
-        builder = GraphBuilderService(api_key=Config.ZEP_API_KEY)
+        builder = GraphBuilderService()
         builder.delete_graph(graph_id)
         
         return jsonify({

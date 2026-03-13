@@ -537,19 +537,22 @@ def chat_with_report_agent():
         simulation_requirement = project.simulation_requirement or ""
         
         # Create Agent and conduct conversation
-        agent = ReportAgent(
-            graph_id=graph_id,
-            simulation_id=simulation_id,
-            simulation_requirement=simulation_requirement
-        )
-        
+        try:
+            agent = ReportAgent(
+                graph_id=graph_id,
+                simulation_id=simulation_id,
+                simulation_requirement=simulation_requirement
+            )
+        except ValueError as e:
+            return jsonify({"success": False, "error": "setup_required", "message": str(e)}), 400
+
         result = agent.chat(message=message, chat_history=chat_history)
-        
+
         return jsonify({
             "success": True,
             "data": result
         })
-        
+
     except Exception as e:
         logger.error(f"Chat failed: {str(e)}")
         return jsonify({

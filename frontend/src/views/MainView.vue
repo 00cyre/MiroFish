@@ -46,6 +46,28 @@
         />
       </div>
 
+      <!-- API Key Setup Overlay -->
+      <div v-if="showKeySetup" class="key-setup-overlay">
+        <div class="key-setup-card">
+          <div class="key-setup-title">Anthropic API Key Required</div>
+          <p class="key-setup-desc">{{ error }}</p>
+          <input
+            v-model="apiKeyInput"
+            type="password"
+            class="key-setup-input"
+            placeholder="sk-ant-..."
+            @keyup.enter="saveKeyAndRetry"
+          />
+          <div v-if="keyError" class="key-setup-error">{{ keyError }}</div>
+          <div class="key-setup-actions">
+            <button class="key-setup-btn" :disabled="keySaving" @click="saveKeyAndRetry">
+              {{ keySaving ? 'Saving...' : 'Save & Retry' }}
+            </button>
+            <button class="key-setup-cancel" @click="showKeySetup = false">Cancel</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Right Panel: Step Components -->
       <div class="panel-wrapper right" :style="rightPanelStyle">
         <!-- Step 1: Graph Construction -->
@@ -80,6 +102,7 @@ import { useRoute, useRouter } from 'vue-router'
 import GraphPanel from '../components/GraphPanel.vue'
 import Step1GraphBuild from '../components/Step1GraphBuild.vue'
 import Step2EnvSetup from '../components/Step2EnvSetup.vue'
+import service from '../api/index'
 import { generateOntology, getProject, buildGraph, getTaskStatus, getGraphData } from '../api/graph'
 import { getPendingUpload, clearPendingUpload } from '../store/pendingUpload'
 
@@ -104,6 +127,12 @@ const currentPhase = ref(-1) // -1: Upload, 0: Ontology, 1: Build, 2: Complete
 const ontologyProgress = ref(null)
 const buildProgress = ref(null)
 const systemLogs = ref([])
+
+// API key setup state
+const showKeySetup = ref(false)
+const apiKeyInput = ref('')
+const keySaving = ref(false)
+const keyError = ref('')
 
 // Polling timers
 let pollTimer = null
@@ -175,6 +204,33 @@ const handleGoBack = () => {
   }
 }
 
+// --- API Key Setup ---
+const saveKeyAndRetry = async () => {
+  const key = apiKeyInput.value.trim()
+  if (!key) {
+    keyError.value = 'Please enter your Anthropic API key'
+    return
+  }
+  if (!key.startsWith('sk-ant-')) {
+    keyError.value = 'Key must start with sk-ant-'
+    return
+  }
+  keySaving.value = true
+  keyError.value = ''
+  try {
+    await service({ url: '/api/setup/key', method: 'post', data: { key } })
+    addLog('Anthropic API key saved successfully. Retrying...')
+    showKeySetup.value = false
+    error.value = ''
+    apiKeyInput.value = ''
+    await handleNewProject()
+  } catch (err) {
+    keyError.value = err.response?.data?.error || err.message || 'Failed to save key'
+  } finally {
+    keySaving.value = false
+  }
+}
+
 // --- Data Logic ---
 
 const initProject = async () => {
@@ -226,8 +282,15 @@ const handleNewProject = async () => {
       addLog(`Error generating ontology: ${error.value}`)
     }
   } catch (err) {
-    error.value = err.message
-    addLog(`Exception in handleNewProject: ${err.message}`)
+    const errData = err.response?.data
+    if (errData?.error === 'setup_required') {
+      showKeySetup.value = true
+      error.value = errData.message || 'Anthropic API key not configured'
+      addLog('Anthropic API key required. Please enter your key to continue.')
+    } else {
+      error.value = err.message
+    }
+    addLog(`Exception in handleNewProject: ${error.value}`)
   } finally {
     loading.value = false
   }
@@ -543,5 +606,104 @@ onUnmounted(() => {
 
 .panel-wrapper.left {
   border-right: 1px solid #EAEAEA;
+}
+
+/* Key Setup Overlay */
+.key-setup-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.key-setup-card {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 32px;
+  width: 420px;
+  max-width: 90%;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.key-setup-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.key-setup-desc {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.key-setup-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: #111;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #0f0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.key-setup-input:focus {
+  border-color: #0f0;
+}
+
+.key-setup-error {
+  color: #f44336;
+  font-size: 11px;
+  margin-top: 8px;
+}
+
+.key-setup-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.key-setup-btn {
+  flex: 1;
+  padding: 10px;
+  background: #0f0;
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.key-setup-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.key-setup-cancel {
+  padding: 10px 20px;
+  background: transparent;
+  color: #666;
+  border: 1px solid #333;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.key-setup-cancel:hover {
+  color: #999;
+  border-color: #555;
 }
 </style>
