@@ -206,7 +206,7 @@ def get_generate_status():
             "simulation_id": "sim_xxxx"     // Optional, simulation ID
         }
     
-    返回：
+    Returns:
         {
             "success": true,
             "data": {
@@ -274,7 +274,7 @@ def get_report(report_id: str):
     """
     Get report details
     
-    返回：
+    Returns:
         {
             "success": true,
             "data": {
@@ -316,7 +316,7 @@ def get_report_by_simulation(simulation_id: str):
     """
     Get report by simulation ID
     
-    返回：
+    Returns:
         {
             "success": true,
             "data": {
@@ -359,7 +359,7 @@ def list_reports():
         simulation_id: Filter by simulation ID (optional)
         limit: Maximum number of results (default 50)
     
-    返回：
+    Returns:
         {
             "success": true,
             "data": [...],
@@ -609,7 +609,7 @@ def get_report_sections(report_id: str):
 
     The frontend can poll this endpoint to get generated section content without waiting for the entire report to complete
     
-    返回：
+    Returns:
         {
             "success": true,
             "data": {
@@ -658,7 +658,7 @@ def get_single_section(report_id: str, section_index: int):
     """
     Get single section content
     
-    返回：
+    Returns:
         {
             "success": true,
             "data": {
@@ -706,7 +706,7 @@ def check_report_status(simulation_id: str):
 
     Used by the frontend to determine whether to unlock the Interview feature
     
-    返回：
+    Returns:
         {
             "success": true,
             "data": {
@@ -763,7 +763,7 @@ def get_agent_log(report_id: str):
     Query parameters:
         from_line: Starting line number (optional, default 0, for incremental retrieval)
     
-    返回：
+    Returns:
         {
             "success": true,
             "data": {
@@ -814,7 +814,7 @@ def stream_agent_log(report_id: str):
     """
     Get complete Agent log (fetch all at once)
     
-    返回：
+    Returns:
         {
             "success": true,
             "data": {
@@ -857,7 +857,7 @@ def get_console_log(report_id: str):
     Query parameters:
         from_line: Starting line number (optional, default 0, for incremental retrieval)
     
-    返回：
+    Returns:
         {
             "success": true,
             "data": {
@@ -896,7 +896,7 @@ def stream_console_log(report_id: str):
     """
     Get complete console log (fetch all at once)
     
-    返回：
+    Returns:
         {
             "success": true,
             "data": {
@@ -952,7 +952,7 @@ def search_graph_tool():
                 "error": "Please provide graph_id and query"
             }), 400
         
-        from ..services.zep_tools import ZepToolsService
+        from ..services.pg_tools import ZepToolsService
         
         tools = ZepToolsService()
         result = tools.search_graph(
@@ -996,7 +996,7 @@ def get_graph_statistics_tool():
                 "error": "Please provide graph_id"
             }), 400
 
-        from ..services.zep_tools import ZepToolsService
+        from ..services.pg_tools import ZepToolsService
         
         tools = ZepToolsService()
         result = tools.get_graph_statistics(graph_id)

@@ -674,16 +674,16 @@ const customMaxRounds = ref(40)   // Default recommended: 40 rounds
 
 // Watch stage to update phase
 watch(currentStage, (newStage) => {
-  if (newStage === '生成Agent人设' || newStage === 'generating_profiles') {
+  if (newStage === 'Generating Agent Profiles' || newStage === 'generating_profiles') {
     phase.value = 1
-  } else if (newStage === '生成模拟配置' || newStage === 'generating_config') {
+  } else if (newStage === 'Generating Simulation Config' || newStage === 'generating_config') {
     phase.value = 2
     // Entering config generation phase, start polling config
     if (!configTimer) {
       addLog('Starting dual-platform simulation config generation...')
       startConfigPolling()
     }
-  } else if (newStage === '准备模拟脚本' || newStage === 'copying_scripts') {
+  } else if (newStage === 'Preparing Simulation Scripts' || newStage === 'copying_scripts') {
     phase.value = 2 // Still in config phase
   }
 })
