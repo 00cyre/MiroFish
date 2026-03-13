@@ -1,0 +1,8 @@
+model_list:
+  - model_name: "anthropic/claude-sonnet-4-5"
+    litellm_params:
+      model: "claude-sonnet-4-5"
+      api_key: "os.environ/ANTHROPIC_API_KEY"
+
+litellm_settings:
+  drop_params: true  # drop unsupported params like response_format if needed
